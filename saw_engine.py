@@ -18,9 +18,11 @@ class SAWEngine:
             for j in range(kolom):
                 column = data[:, j]
                 if types[j].lower() == 'benefit':
-                    norm_matrix[:, j] = column / np.max(column)
+                    max_val = np.max(column)
+                    norm_matrix[:, j] = column / max_val if max_val != 0 else 0
                 else:
-                    norm_matrix[:, j] = np.min(column) / column
+                    min_val = np.min(column)
+                    norm_matrix[:, j] = np.where(column != 0, min_val / column, 0)
             
             # Perankingan (V)
             final_scores = np.dot(norm_matrix, w)

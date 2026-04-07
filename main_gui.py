@@ -8,14 +8,15 @@ def create_window():
             [sg.Text("Jumlah Kriteria:"), sg.Input(key="-IN_K-", size=(5,1)), 
              sg.Button("Generate Input")]
         ])],
-        [sg.Column([], key="-COL_K-")], 
+        # Perbaikan: Menambahkan container khusus untuk input dinamis
+        [sg.Column([[]], key="-COL_K-", scrollable=True, vertical_scroll_only=True, size=(400, 150), visible=False)], 
         [sg.Frame("Langkah 2: Data Alternatif", [
             [sg.Text("Nama:"), sg.Input(key="-ALT_NAME-", size=(12,1)),
              sg.Text("Data (koma):"), sg.Input(key="-ALT_VAL-", size=(20,1)),
              sg.Button("Tambah")]
         ])],
-        [sg.Table(values=[], headings=["Alternatif"], key="-TABLE-", 
-                  auto_size_columns=True, num_rows=6, justification='center')],
+        [sg.Table(values=[], headings=["Alternatif", "Data Kriteria (Array)"], key="-TABLE-", 
+                  auto_size_columns=False, col_widths=[15, 40], num_rows=6, justification='center')],
         [sg.Button("Hitung Sekarang", button_color="green"), sg.Button("Reset")],
         [sg.Multiline(size=(60, 6), key="-OUT-", echo_stdout_stderr=True, disabled=True)]
     ]
@@ -25,6 +26,7 @@ def main():
     window = create_window()
     alt_names = []
     alt_values = []
+    generated = False
 
     while True:
         event, values = window.read()
@@ -32,35 +34,53 @@ def main():
         if event == sg.WIN_CLOSED:
             break
 
-        # Generate baris input untuk Bobot & Tipe secara dinamis
         if event == "Generate Input":
+            if generated:
+                sg.popup_error("Klik 'Reset' untuk mengubah jumlah kriteria!")
+                continue
+
             try:
                 n = int(values["-IN_K-"])
-                k_layout = [[sg.Text(f"C{i+1} Bobot:"), sg.Input(key=f"-W{i}-", size=(5,1)),
-                             sg.Combo(['Benefit', 'Cost'], default_value='Benefit', key=f"-T{i}-")] 
-                            for i in range(n)]
+                if n <= 0: raise ValueError
+
+                k_layout = []
+                for i in range(n):
+                    # Dibungkus dalam satu list baris
+                    row = [sg.Text(f"C{i+1} Bobot:"), 
+                           sg.Input(key=f"-W{i}-", size=(5,1)),
+                           sg.Combo(['Benefit', 'Cost'], default_value='Benefit', key=f"-T{i}-", readonly=True)]
+                    k_layout.append(row)
+
                 window.extend_layout(window["-COL_K-"], k_layout)
-                window["-TABLE-"].update(headings=["Alternatif"] + [f"C{i+1}" for i in range(n)])
-            except:
-                sg.popup_error("Isi jumlah kriteria dengan angka!")
+                window["-COL_K-"].update(visible=True)
+                generated = True
+
+            except Exception as e:
+                sg.popup_error(f"Masukkan angka jumlah kriteria yang valid! Error: {e}")
 
         # Menambahkan data ke list dan tabel
         if event == "Tambah":
             try:
                 name = values["-ALT_NAME-"]
+
                 raw_data = [float(x.strip()) for x in values["-ALT_VAL-"].split(",")]
-                if len(raw_data) != int(values["-IN_K-"]):
-                    sg.popup_error("Jumlah data harus sama dengan jumlah kriteria!")
+                n_kriteria = int(values["-IN_K-"])
+
+                if len(raw_data) != n_kriteria:
+                    sg.popup_error(f"Data harus berjumlah {n_kriteria} kriteria!")
                     continue
                 
                 alt_names.append(name)
                 alt_values.append(raw_data)
                 
                 # Update tabel tampilan
-                table_display = [[alt_names[i]] + alt_values[i] for i in range(len(alt_values))]
+                table_display = [[alt_names[i] + str(alt_values[i])] for i in range(len(alt_values))]
                 window["-TABLE-"].update(values=table_display)
+
+                window["-ALT_NAME-"].update("")
+                window["-ALT_VAL-"].update("")
             except:
-                sg.popup_error("Format salah! Contoh: 80, 90, 75")
+                sg.popup_error("Format data salah! Gunakan angka dipisah koma (contoh: 80, 90, 75)")
 
         # Memanggil fungsi di file saw_engine.py
         if event == "Hitung Sekarang":
@@ -79,11 +99,12 @@ def main():
                     res_str += f"Peringkat {i+1}: {name} ({score:.4f})\n"
                 window["-OUT-"].update(res_str)
             except Exception as e:
-                sg.popup_error(f"Gagal menghitung: {e}")
+                sg.popup_error(f"Pastikan semua bobot sudah diisi angka! \nDetail: {e}")
 
         if event == "Reset":
             window.close()
             main()
+            break
 
     window.close()
 
