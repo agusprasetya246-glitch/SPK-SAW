@@ -5,7 +5,8 @@ def create_window():
     layout = [
         [sg.Text("SPK Metode SAW (Modular Version)", font=("Arial", 14, "bold"))],
         [sg.Frame("Langkah 1: Konfigurasi", [
-            [sg.Text("Jumlah Kriteria:"), sg.Input(key="-IN_K-", size=(5,1)), 
+            [sg.Text("Jumlah Kriteria:"), 
+             sg.Input(key="-IN_K-", size=(5,1), enable_events=True), 
              sg.Button("Generate Input")]
         ])],
         # Perbaikan: Menambahkan container khusus untuk input dinamis
@@ -34,6 +35,10 @@ def main():
         if event == sg.WIN_CLOSED:
             break
 
+        if event == "-IN_K-" or event.startswith("-W"):
+            if values[event] and values[event][-1] not in ('0123456789'):
+                window[event].update(values[event][:-1])
+
         if event == "Generate Input":
             if generated:
                 sg.popup_error("Klik 'Reset' untuk mengubah jumlah kriteria!")
@@ -46,8 +51,10 @@ def main():
                 k_layout = []
                 for i in range(n):
                     # Dibungkus dalam satu list baris
-                    row = [sg.Text(f"C{i+1} Bobot:"), 
-                           sg.Input(key=f"-W{i}-", size=(5,1)),
+                    row = [sg.Text(f"Nama C{i+1}:"),
+                           sg.Input(key=f"-NAME_K{i}-", size=(10,1)), # Tambahan input nama
+                           sg.Text("Bobot (%):"),
+                           sg.Input(key=f"-W{i}-", size=(5,1), enable_events=True),
                            sg.Combo(['Benefit', 'Cost'], default_value='Benefit', key=f"-T{i}-", readonly=True)]
                     k_layout.append(row)
 
@@ -86,20 +93,37 @@ def main():
         if event == "Hitung Sekarang":
             try:
                 n = int(values["-IN_K-"])
-                weights = [float(values[f"-W{i}-"]) for i in range(n)]
+                raw_weights = []
+
+                for i in range(n):
+                    w_val = values[f"-W{i}-"]
+                    if not w_val:
+                        sg.popup_error(f"Bobot kriteria {i+1} belum diisi!")
+                        raise Exception("Incomplete weights")
+                    raw_weights.append(float(w_val))
+
+                total_w = sum(raw_weights)
+                if total_w != 100:
+                    sg.popup_error(f"Total bobot harus 100%! Sekarang: {total_w}%")
+                    continue
+
+                weights = [w / 100 for w in raw_weights]
                 types = [values[f"-T{i}-"] for i in range(n)]
+
+                k_names = [values[f"-NAME_K{i}-"] if values[f"-NAME_K{i}-"] else f"C{i+1}" for i in range(n)]
                 
                 # PROSES BACKEND
                 scores = SAWEngine.calculate_saw(alt_values, weights, types)
                 
                 # Tampilkan hasil
                 ranked = sorted(zip(alt_names, scores), key=lambda x: x[1], reverse=True)
-                res_str = "HASIL PERANKINGAN:\n"
+                res_str = "HASIL PERANKINGAN:\n" + "-"*30 + "\n"
                 for i, (name, score) in enumerate(ranked):
                     res_str += f"Peringkat {i+1}: {name} ({score:.4f})\n"
                 window["-OUT-"].update(res_str)
             except Exception as e:
-                sg.popup_error(f"Pastikan semua bobot sudah diisi angka! \nDetail: {e}")
+                if str(e) != "Incomplete weights":
+                    sg.popup_error(f"Error: {e}")
 
         if event == "Reset":
             window.close()
