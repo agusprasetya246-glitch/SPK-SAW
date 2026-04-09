@@ -3,20 +3,20 @@ from saw_engine import SAWEngine
 
 def create_window():
     layout = [
-        [sg.Text("SPK Metode SAW (Modular Version)", font=("Arial", 14, "bold"))],
+        [sg.Text("SPK Metode SAW Kelompok 3", font=("Arial", 14, "bold"))],
         [sg.Frame("Langkah 1: Konfigurasi & Bobot", [
             [sg.Text("Jumlah Kriteria:"), 
              sg.Input(key="-IN_K-", size=(5,1), enable_events=True), 
              sg.Button("Generate")]
         ])],
-        [sg.Column([[]], key="-COL_K-", scrollable=True, size=(550, 120), visible=False)], 
+        [sg.Column([[]], key="-COL_K-", scrollable=True, vertical_scroll_only=True, size=(550, 120), visible=False)], 
         
         [sg.Frame("Langkah 2: Data Alternatif", [
             [sg.Text("Nama Alternatif:"), sg.Input(key="-ALT_NAME-", size=(15,1)), sg.Button("Tambah Baris")],
             [sg.HorizontalSeparator()],
             [sg.Column([[]], key="-TABLE_HEADER-")],
             # Penting: Column ini menjadi tempat baris-baris yang di-pin
-            [sg.Column([[]], key="-TABLE_BODY-", scrollable=True, size=(580, 250))]
+            [sg.Column([[]], key="-TABLE_BODY-", scrollable=True, size=(580, 250), expand_x=True, expand_y=True)]
         ])],
 
         [sg.Button("Hitung Sekarang", button_color="green"), sg.Button("Reset")],
@@ -75,6 +75,7 @@ def main():
                 
                 window.extend_layout(window["-TABLE_BODY-"], [row_pinned])
                 window["-ALT_NAME-"].update("")
+                window["-TABLE_BODY-"].contents_changed()
                 alt_count += 1
             except: pass
 
