@@ -7,7 +7,7 @@ def create_window():
         [sg.Frame("Langkah 1: Konfigurasi & Bobot", [
             [sg.Text("Jumlah Kriteria:"), 
              sg.Input(key="-IN_K-", size=(5,1), enable_events=True), 
-             sg.Button("Generate")]
+             sg.Button("Generate"), sg.Button("Reset")]
         ])],
         [sg.Column([[]], key="-COL_K-", scrollable=True, vertical_scroll_only=True, size=(550, 120), visible=False)], 
         
@@ -19,7 +19,7 @@ def create_window():
             [sg.Column([[]], key="-TABLE_BODY-", scrollable=True, size=(580, 250), expand_x=True, expand_y=True)]
         ])],
 
-        [sg.Button("Hitung Sekarang", button_color="green"), sg.Button("Reset")],
+        [sg.Button("Hitung Sekarang", button_color="green")],
         [sg.Multiline(size=(70, 6), key="-OUT-", disabled=True)]
     ]
     return sg.Window("Sistem Pendukung Keputusan", layout, finalize=True)
@@ -89,7 +89,7 @@ def main():
                 n = int(values["-IN_K-"])
                 raw_weights = [float(values[f"-W{i}-"]) for i in range(n)]
                 if sum(raw_weights) != 100:
-                    sg.popup_error(f"Total harus harus 100%! (Sekarang: {sum(raw_weights)}%)"); continue
+                    sg.popup_error(f"Total bobot harus harus 100%! (Sekarang: {sum(raw_weights)}%)"); continue
                 
                 weights = [w/100 for w in raw_weights]
                 types = [values[f"-T{i}-"] for i in range(n)]
